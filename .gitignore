@@ -1,0 +1,11 @@
+config.py
+*.session
+*.session-journal
+queue.json
+recovery.json
+downloads/
+*.bak
+*backup*.py
+__pycache__/
+*.pyc
+.env
