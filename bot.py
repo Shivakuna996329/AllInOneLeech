@@ -1045,8 +1045,6 @@ async def speedtest_command(client, message):
 
     try:
         import speedtest
-        import subprocess
-        import re
 
         def run_test():
             test = speedtest.Speedtest()
@@ -1055,82 +1053,28 @@ async def speedtest_command(client, message):
             download = test.download() / 1_000_000
             upload = test.upload() / 1_000_000
 
-            result = subprocess.run(
-                ["ping", "-c", "4", "1.1.1.1"],
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
-
-            match = re.search(
-                r"= [0-9.]+/([0-9.]+)/",
-                result.stdout
-            )
-
-            ping = float(match.group(1)) if match else 0.0
-
-            times = re.findall(
-                r"time[=<]([0-9.]+)\s*ms",
-                result.stdout
-            )
-
-            times = [float(t) for t in times]
-
-            jitter = (
-                sum(
-                    abs(times[i] - times[i - 1])
-                    for i in range(1, len(times))
-                ) / (len(times) - 1)
-                if len(times) > 1 else 0.0
-            )
-
-            loss_match = re.search(
-                r"(\d+(?:\.\d+)?)%\s*packet loss",
-                result.stdout
-            )
-
-            packet_loss = (
-                float(loss_match.group(1))
-                if loss_match else None
-            )
-
+            ping = server.get("latency")
             server_name = server.get("name", "Unknown")
             country = server.get("country", "Unknown")
 
-            return (
-                download,
-                upload,
-                ping,
-                jitter,
-                packet_loss,
-                server_name,
-                country
-            )
+            return download, upload, ping, server_name, country
 
-        (
-            download,
-            upload,
-            ping,
-            jitter,
-            packet_loss,
-            server_name,
-            country
-        ) = await asyncio.to_thread(run_test)
-
-        packet_loss_text = (
-            f"{packet_loss:.1f}%"
-            if packet_loss is not None
-            else "Unknown"
+        download, upload, ping, server_name, country = (
+            await asyncio.to_thread(run_test)
         )
 
-        text = "\n".join([
+        ping_text = (
+            f"{ping:.2f} ms" if ping is not None else "N/A"
+        )
+
+        text = "\\n".join([
             "🚀 INTERNET SPEED TEST",
             "",
             f"📥 Download: {download:.2f} Mbps",
             f"📤 Upload: {upload:.2f} Mbps",
-            f"📡 Ping: {ping:.2f} ms",
-            f"📊 Jitter: {jitter:.2f} ms",
-            f"📉 Packet Loss: {packet_loss_text}",
+            f"📡 Ping: {ping_text}",
+            "📊 Jitter: N/A",
+            "📉 Packet Loss: N/A",
             f"🖥️ Server: {server_name}",
             f"🌍 Country: {country}"
         ])
