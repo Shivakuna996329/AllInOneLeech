@@ -1046,37 +1046,72 @@ async def speedtest_command(client, message):
 
     try:
         import speedtest
+        import aiohttp
+        import statistics
 
-        def run_test():
+        def run_speed_test():
             test = speedtest.Speedtest()
             server = test.get_best_server()
-
             download = test.download() / 1_000_000
             upload = test.upload() / 1_000_000
+            return (
+                download,
+                upload,
+                server.get("name", "Unknown"),
+                server.get("country", "Unknown")
+            )
 
-            ping = server.get("latency")
-            server_name = server.get("name", "Unknown")
-            country = server.get("country", "Unknown")
-
-            return download, upload, ping, server_name, country
-
-        download, upload, ping, server_name, country = (
-            await asyncio.to_thread(run_test)
+        download, upload, server_name, country = (
+            await asyncio.to_thread(run_speed_test)
         )
 
-        if ping is not None and (not 0 < ping < 5000):
-            ping = None
+        times = []
+        failed = 0
+        url = "https://www.cloudflare.com/cdn-cgi/trace"
+
+        timeout = aiohttp.ClientTimeout(total=8)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            for _ in range(5):
+                try:
+                    start_time = time.perf_counter()
+
+                    async with session.get(url) as response:
+                        await response.read()
+                        if response.status >= 500:
+                            raise Exception("HTTP server error")
+
+                    elapsed = (time.perf_counter() - start_time) * 1000
+                    times.append(elapsed)
+
+                except Exception:
+                    failed += 1
+
+                await asyncio.sleep(0.3)
+
+        ping = statistics.mean(times) if times else None
+
+        jitter = (
+            statistics.mean(
+                abs(times[i] - times[i - 1])
+                for i in range(1, len(times))
+            )
+            if len(times) > 1 else None
+        )
+
+        packet_loss = failed / 5 * 100
 
         ping_text = f"{ping:.2f} ms" if ping is not None else "N/A"
+        jitter_text = f"{jitter:.2f} ms" if jitter is not None else "N/A"
 
-        text = "\n".join([
+        text = "\\n".join([
             "🚀 INTERNET SPEED TEST",
             "",
             f"📥 Download: {download:.2f} Mbps",
             f"📤 Upload: {upload:.2f} Mbps",
-            f"📡 Ping: {ping_text}",
-            "📊 Jitter: N/A",
-            "📉 Packet Loss: N/A",
+            f"📡 HTTP Ping: {ping_text}",
+            f"📊 Jitter: {jitter_text}",
+            f"📉 Packet Loss: {packet_loss:.1f}%",
             f"🖥️ Server: {server_name}",
             f"🌍 Country: {country}"
         ])
