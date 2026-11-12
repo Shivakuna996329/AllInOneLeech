@@ -1,0 +1,8 @@
+Pyrogram==2.0.106
+TgCrypto==1.2.5
+aiohttp
+gdown
+requests
+beautifulsoup4
+speedtest-cli
+tqdm
