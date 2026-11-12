@@ -531,7 +531,8 @@ async def progress(current, total, message, start_time):
     try:
         await message.edit_text(text)
     except Exception as error:
-        print(f"Progress Update Error: {error}")
+        if "MESSAGE_NOT_MODIFIED" not in str(error):
+            print(f"Progress Update Error: {error}")
 
 
 async def upload_progress(current, total, status, start_time):
