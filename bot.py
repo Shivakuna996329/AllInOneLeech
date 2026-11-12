@@ -1064,11 +1064,12 @@ async def speedtest_command(client, message):
             await asyncio.to_thread(run_test)
         )
 
-        ping_text = (
-            f"{ping:.2f} ms" if ping is not None else "N/A"
-        )
+        if ping is not None and (not 0 < ping < 5000):
+            ping = None
 
-        text = "\\n".join([
+        ping_text = f"{ping:.2f} ms" if ping is not None else "N/A"
+
+        text = "\n".join([
             "🚀 INTERNET SPEED TEST",
             "",
             f"📥 Download: {download:.2f} Mbps",
