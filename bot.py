@@ -748,7 +748,46 @@ async def run_queue_job(job_id, message, status):
         except Exception:
             pass
 
+# --- PLAYLIST FEATURE ---
+@app.on_message(filters.command("playlist"))
+async def playlist_command(client, message):
+    if not is_owner(message):
+        return
+    if len(message.command) < 2:
+        return await message.reply_text("Usage: /playlist YouTube Playlist URL")
 
+    url = message.command[1]
+    status = await message.reply_text("🎵 Playlist check chesthunna mama...")
+
+    try:
+        import yt_dlp
+        ydl_opts = {'quiet': True, 'extract_flat': True, 'skip_download': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            entries = info.get('entries', [])
+
+        if not entries:
+            return await status.edit_text("❌ Playlist lo videos kanipinchaledu mama.")
+
+        await status.edit_text(f"🎵 {info.get('title')}\n📦 Total: {len(entries)} videos\n\nFirst 5 videos ni queue lo vesthunna...")
+
+        for e in entries[:5]:
+            vid_id = e.get('id')
+            title = e.get('title', 'video')
+            if not vid_id:
+                continue
+            vid_url = f"https://www.youtube.com/watch?v={vid_id}"
+            filename = f"{title}.mp4"
+            job_id = await queue_manager.create_job(message.chat.id, filename, vid_url, priority="normal")
+            job_status = await message.reply_text(f"📋 Job Queued\n📁 {filename}\n🆔 {job_id}")
+            job = queue_manager.get_job(job_id)
+            if job:
+                scheduler_queue.put_nowait((job["priority_value"], job["sequence"], job_id, message, job_status))
+        start_priority_scheduler()
+        await status.edit_text(f"✅ Playlist Done mama! {min(len(entries),5)} videos Queue lo padesa!")
+    except Exception as e:
+        await status.edit_text(f"❌ Playlist Error: {str(e)[:200]}")
+# --- PLAYLIST END ---
 @app.on_message(filters.command("download"))
 async def download(client, message):
 
