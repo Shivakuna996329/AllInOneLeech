@@ -49,6 +49,24 @@ DOWNLOADS = Path("downloads")
 DOWNLOADS.mkdir(exist_ok=True)
 HISTORY_FILE = Path("download_history.txt")
 
+# --- AUTO-CLEANUP 24H ---
+async def auto_cleanup_loop():
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            now = time.time()
+            for f in DOWNLOADS.rglob("*"):
+                if f.is_file() and now - f.stat().st_mtime > 86400:
+                    try:
+                        f.unlink()
+                        print(f"Auto-Cleanup Deleted: {f.name}")
+                    except Exception as e:
+                        print(f"Cleanup Error: {e}")
+        except Exception as e:
+            print(f"Auto-Cleanup Loop Error: {e}")
+# --- AUTO-CLEANUP END ---
+
+
 # =====================================
 # V3 DOWNLOAD STATISTICS
 # =====================================
@@ -102,6 +120,7 @@ def update_stats(*keys):
 
 
 MAX_SIZE = 4 * 1024**3
+DEFAULT_QUALITY = "720" # 720 / 1080 / audio
 MAX_CONCURRENT = 3
 MAX_RETRIES = 3
 RETRY_DELAY = 2
@@ -186,6 +205,7 @@ async def start(client, message):
     text = """🔥 AllInOneLeech Personal Bot
 
 📥 /download URL
+🎵 /playlist YouTube Playlist URL
 📤 /upload filename
 📁 /files
 🔄 /recover
