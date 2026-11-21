@@ -21,6 +21,7 @@ import hashlib
 import secrets
 import gdown
 import asyncio
+import socket
 asyncio.set_event_loop(asyncio.new_event_loop())
 import os
 import pyrogram
@@ -1147,7 +1148,7 @@ async def speedtest_command(client, message):
 
         timeout = aiohttp.ClientTimeout(total=8)
 
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(family=socket.AF_INET), timeout=timeout) as session:
             for _ in range(5):
                 try:
                     start_time = time.perf_counter()
