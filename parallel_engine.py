@@ -1,40 +1,44 @@
-import asyncio
-import os
-import subprocess
-import urllib.request
+import asyncio, subprocess, urllib.request, urllib.error
 from pathlib import Path
-MAX_SIZE = 4 * 1024**3
 async def parallel_download(url, destination, pause_event, progress_callback=None):
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     def _run():
-        # Try 1: curl
+        errors = []
+        # 1. curl
         try:
-            r = subprocess.run(["curl", "-L", "--fail", "-A", "Mozilla/5.0", "-o", str(destination), url], capture_output=True, text=True, timeout=3600)
+            r = subprocess.run(["curl", "-L", "--fail", "-A", "Mozilla/5.0", "-o", str(destination), url], capture_output=True, text=True, timeout=120)
             if r.returncode == 0 and destination.exists() and destination.stat().st_size > 0:
                 return "curl"
-            print(f"curl failed: {r.stderr[:300]}")
+            errors.append(f"curl rc={r.returncode} err={r.stderr[:200]}")
         except Exception as e:
-            print(f"curl exception: {e}")
-        # Try 2: wget
+            errors.append(f"curl ex={repr(e)}")
+        # 2. wget
         try:
-            r = subprocess.run(["wget", "-O", str(destination), url], capture_output=True, text=True, timeout=3600)
+            r = subprocess.run(["wget", "-O", str(destination), url], capture_output=True, text=True, timeout=120)
             if r.returncode == 0 and destination.exists() and destination.stat().st_size > 0:
                 return "wget"
-            print(f"wget failed: {r.stderr[:300]}")
+            errors.append(f"wget rc={r.returncode} err={r.stderr[:200]}")
         except Exception as e:
-            print(f"wget exception: {e}")
-        # Try 3: python urllib
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=120) as resp, open(destination, "wb") as f:
-            while True:
-                chunk = resp.read(1024*1024)
-                if not chunk:
-                    break
-                f.write(chunk)
-        return "urllib"
+            errors.append(f"wget ex={repr(e)}")
+        # 3. urllib
+        try:
+            if destination.exists():
+                destination.unlink()
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=60) as resp, open(destination, "wb") as f:
+                while True:
+                    chunk = resp.read(1024*1024)
+                    if not chunk: break
+                    f.write(chunk)
+            if destination.exists() and destination.stat().st_size > 0:
+                return "urllib"
+            errors.append("urllib: empty file")
+        except Exception as e:
+            errors.append(f"urllib ex={repr(e)}")
+        raise Exception("ALL FAILED: " + " | ".join(errors))
     method = await asyncio.to_thread(_run)
-    print(f"Downloaded via {method}: {destination}")
+    print(f"Downloaded via {method}")
     if progress_callback:
         try:
             size = destination.stat().st_size
