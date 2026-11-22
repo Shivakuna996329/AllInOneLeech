@@ -1,4 +1,5 @@
 import asyncio
+import socket
 import aiohttp
 import os
 import math
@@ -25,13 +26,16 @@ async def parallel_download(
     )
 
     connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+        resolver=aiohttp.DefaultResolver(),
         limit=MAX_CONNECTIONS,
         limit_per_host=MAX_CONNECTIONS
     )
 
     async with aiohttp.ClientSession(
         timeout=timeout,
-        connector=connector
+        connector=connector,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0"}
     ) as session:
 
         # Check Range support
