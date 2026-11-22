@@ -691,6 +691,7 @@ async def run_queue_job(job_id, message, status):
                             f"⚠️ Download failed!\n\n"
                             f"📁 {filename}\n"
                             f"🔄 Retry: {attempt}/{MAX_RETRIES - 1}\n"
+                            f"❌ Error: {str(error)[:200]}\n"
                             f"⏳ Retrying in {RETRY_DELAY * attempt} seconds..."
                         )
                     except Exception:
