@@ -697,6 +697,9 @@ async def run_queue_job(job_id, message, status):
                     if "youtube.com" in url or "youtu.be" in url or "instagram.com" in url or "facebook.com" in url:
                         await download_with_ytdlp(url, final_path, job["pause_event"], job_progress)
                     else:
+                        if "youtube" in url or "youtu.be" in url:
+                        import yt_dlp; yt_dlp.YoutubeDL({"outtmpl": str(final_path), "format": "best[ext=mp4]/best"}).download([url])
+                    else:
                         await parallel_download(
                             url,
                             final_path,
