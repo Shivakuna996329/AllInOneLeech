@@ -139,6 +139,29 @@ scheduler_queue = asyncio.PriorityQueue()
 scheduler_workers = []
 
 
+
+async def download_with_ytdlp(url, final_path, pause_event, progress_cb):
+    import yt_dlp, asyncio
+    def _run():
+        opts = {
+            "outtmpl": str(final_path.with_suffix("")) + ".%(ext)s",
+            "format": "best[ext=mp4]/best",
+            "merge_output_format": "mp4",
+            "quiet": True,
+            "noplaylist": True,
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+    await asyncio.to_thread(_run)
+    # yt-dlp creates file with ext, find it
+    import glob
+    for f in glob.glob(str(final_path.with_suffix("")) + ".*"):
+        import pathlib as _pl
+        src = _pl.Path(f)
+        if src != final_path and src.stat().st_size > 0:
+            src.replace(final_path)
+            break
+
 async def scheduler_worker(worker_id):
     while True:
         item = await scheduler_queue.get()
@@ -671,9 +694,12 @@ async def run_queue_job(job_id, message, status):
             # V3 AUTO RETRY
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
-                    await parallel_download(
-                        url,
-                        final_path,
+                    if "youtube.com" in url or "youtu.be" in url or "instagram.com" in url or "facebook.com" in url:
+                        await download_with_ytdlp(url, final_path, job["pause_event"], job_progress)
+                    else:
+                        await parallel_download(
+                            url,
+                            final_path,
                         job["pause_event"],
                         job_progress
                     )
