@@ -148,7 +148,7 @@ async def download_with_ytdlp(url, final_path, pause_event, progress_cb):
             "format": "best[height<=720][ext=mp4]/best[height<=720]/best",
             "merge_output_format": "mp4",
             "quiet": True, "concurrent_fragment_downloads": 4, "buffersize": 1024*1024,
-            "noplaylist": True, "cookiefile": "cookies.txt" if __import__("os").path.exists("cookies.txt") else None, "extractor_args": {"youtube": {"player_client": ["android", "ios", "web"]}}, "impersonate": "chrome",
+            "noplaylist": True, "cookiefile": "cookies.txt" if __import__("os").path.exists("cookies.txt") else None, "extractor_args": {"youtube": {"player_client": ["android", "ios", "web"]}},
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
