@@ -145,9 +145,9 @@ async def download_with_ytdlp(url, final_path, pause_event, progress_cb):
     def _run():
         opts = {
             "outtmpl": str(final_path.with_suffix("")) + ".%(ext)s",
-            "format": "best[ext=mp4]/best",
+            "format": "best[height<=720][ext=mp4]/best[height<=720]/best",
             "merge_output_format": "mp4",
-            "quiet": True,
+            "quiet": True, "concurrent_fragment_downloads": 4, "buffersize": 1024*1024,
             "noplaylist": True,
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
