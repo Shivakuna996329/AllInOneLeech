@@ -7,7 +7,3 @@ beautifulsoup4
 speedtest-cli
 tqdm
 yt-dlp
-yt-dlp
-yt-dlp
-libtorrent
-libtorrent
