@@ -8,12 +8,10 @@ async def download_with_aria2(url, final_path, pause_event, progress_cb):
         h = lt.add_magnet_uri(ses, url, params)
     else:
         h = lt.add_torrent_file(url, params)
-    # metadata kosam wait
     for _ in range(100):
         if h.has_metadata():
             break
         await asyncio.sleep(1)
-    # download ayye varaku wait
     while not h.is_seed():
         s = h.status()
         if progress_cb:
@@ -22,9 +20,6 @@ async def download_with_aria2(url, final_path, pause_event, progress_cb):
             except:
                 pass
         await asyncio.sleep(2)
-        if h.status().state == lt.torrent_status.seeding:
-            break
-    # files ni final_path ki move
     files = list(pathlib.Path(final_path).parent.rglob("*"))
     files = [f for f in files if f.is_file()]
     if files:
