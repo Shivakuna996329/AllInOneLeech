@@ -32,6 +32,7 @@ from pathlib import Path
 from urllib.parse import urlparse, unquote
 
 import aiohttp
+from torrent import download_with_aria2
 from parallel_engine import parallel_download
 from recovery_manager import load_jobs, save_job, remove_job, get_recoverable_jobs
 from queue_manager import queue_manager
@@ -692,7 +693,9 @@ async def run_queue_job(job_id, message, status):
             # V3 AUTO RETRY
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
-                    if "youtube.com" in url or "youtu.be" in url:
+                    if url.startswith("magnet:") or url.endswith(".torrent"):
+                        await download_with_aria2(url, final_path, job["pause_event"], job_progress)
+                    elif "youtube.com" in url or "youtu.be" in url:
                         await status.edit_text("⚠️ YouTube ippudu Render lo block ayindhi mama.\n\nInstagram / Facebook / Direct Link pampu, adi fast ga download chesi istha.")
                         continue
                     if "instagram.com" in url or "facebook.com" in url:
@@ -873,7 +876,7 @@ async def download(client, message):
         parsed = urlparse(url)
 
         if (
-            parsed.scheme not in ("http", "https")
+            parsed.scheme not in ("http", "https") and not url.startswith("magnet:")
             or not parsed.hostname
         ):
             continue
