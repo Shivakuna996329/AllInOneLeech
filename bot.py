@@ -876,14 +876,18 @@ async def download(client, message):
         parsed = urlparse(url)
 
         if (
-            parsed.scheme not in ("http", "https") and not url.startswith("magnet:")
-            or not parsed.hostname
+            (parsed.scheme not in ("http", "https") and not url.startswith("magnet:")) or (not parsed.hostname and not url.startswith("magnet:"))
         ):
             continue
 
         filename = Path(
             unquote(os.path.basename(parsed.path))
         ).name
+        import re as _re
+        _m=_re.search(r"dn=([^&]+)", url)
+        if url.startswith("magnet:") and _m:
+            from urllib.parse import unquote_plus as _uq
+            filename=_uq(_m.group(1))
 
         filename = filename or "download.bin"
 
