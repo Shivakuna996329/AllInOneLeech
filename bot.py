@@ -1336,7 +1336,7 @@ async def storage_command(client, message):
         return
 
     try:
-        total, used, free = shutil.disk_usage("/storage/emulated/0")
+        total, used, free = shutil.disk_usage("./")
 
         percent = used * 100 / total if total else 0
 
