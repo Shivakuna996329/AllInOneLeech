@@ -694,7 +694,10 @@ async def run_queue_job(job_id, message, status):
             # V3 AUTO RETRY
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
-                    if "youtube.com" in url or "youtu.be" in url or "instagram.com" in url or "facebook.com" in url:
+                    if "youtube.com" in url or "youtu.be" in url:
+                        await status.edit_text("⚠️ YouTube ippudu Render lo block ayindhi mama.\n\nInstagram / Facebook / Direct Link pampu, adi fast ga download chesi istha.")
+                        continue
+                    if "instagram.com" in url or "facebook.com" in url:
                         await download_with_ytdlp(url, final_path, job["pause_event"], job_progress)
                     else:
                         await parallel_download(
