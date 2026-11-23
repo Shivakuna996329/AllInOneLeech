@@ -1,30 +1,34 @@
-import asyncio, pathlib, os
+import asyncio, pathlib, os, shutil, urllib.request, tarfile
+async def _get_aria2():
+    p = shutil.which("aria2c")
+    if p:
+        return p
+    local = pathlib.Path("aria2c")
+    if local.exists():
+        return str(local)
+    url = "https://github.com/q3aql/aria2-static-builds/releases/download/v1.37.0/aria2-1.37.0-linux-gnu-64bit-build1.tar.bz2"
+    urllib.request.urlretrieve(url, "aria2.tar.bz2")
+    with tarfile.open("aria2.tar.bz2") as tf:
+        tf.extractall("aria2_extract")
+    for f in pathlib.Path("aria2_extract").rglob("aria2c"):
+        shutil.move(str(f), str(local))
+        break
+    os.chmod(local, 0o755)
+    return str(local)
 async def download_with_aria2(url, final_path, pause_event, progress_cb):
-    import libtorrent as lt
-    ses = lt.session()
-    ses.listen_on(6881, 6891)
-    params = {"save_path": str(pathlib.Path(final_path).parent), "storage_mode": lt.storage_mode_t.storage_mode_sparse}
-    if url.startswith("magnet:"):
-        h = lt.add_magnet_uri(ses, url, params)
-    else:
-        h = lt.add_torrent_file(url, params)
-    for _ in range(100):
-        if h.has_metadata():
+    aria2c = await _get_aria2()
+    out_dir = str(pathlib.Path(final_path).parent)
+    os.makedirs(out_dir, exist_ok=True)
+    cmd = [aria2c,"--seed-time=0","--max-connection-per-server=16","--split=16","--dir",out_dir,url]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+    while True:
+        line = await proc.stdout.readline()
+        if not line:
             break
-        await asyncio.sleep(1)
-    while not h.is_seed():
-        s = h.status()
-        if progress_cb:
-            try:
-                await progress_cb(s.total_downloaded, s.total_wanted)
-            except:
-                pass
-        await asyncio.sleep(2)
-    files = list(pathlib.Path(final_path).parent.rglob("*"))
-    files = [f for f in files if f.is_file()]
+    await proc.wait()
+    files = [f for f in pathlib.Path(out_dir).rglob("*") if f.is_file()]
     if files:
         newest = max(files, key=lambda f: f.stat().st_mtime)
         if str(newest) != str(final_path):
-            import shutil
             shutil.move(str(newest), str(final_path))
-    return True
+    return proc.returncode == 0
